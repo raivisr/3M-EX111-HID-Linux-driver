@@ -1,0 +1,13 @@
+Driver for 3M EX111 HID touchscreen identified by vendor id - 0596 and product id - 0003.
+
+Just copy to your /usr/src and run make (assuming you have kernel headers and build tools like gcc
+in place). If there are no errors, run make install and this driver will be installed in directory
+for extra modules.
+
+I didn't find a way to make an out of tree hid driver, so I made it usb driver, but if anyone
+wants to push it to kernel tree more appropriate location is probably drivers/hid/
+
+Reference guide for this controller as of time of this writing can be found at:
+http://multimedia.3m.com/mws/mediawebserver?mwsId=SSSSSu7zK1fslxtUn8_S5x_eev7qe17zHvTSevTSeSSSSSS--
+
+2012 (c) Raivis Rengelis <raivis@rrkb.lv>
