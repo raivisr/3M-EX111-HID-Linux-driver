@@ -317,8 +317,7 @@ static int ex111_probe(struct usb_interface *intf,
 		goto out_free;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)
-	ex111->data = usb_alloc_coherent(udev, REPT_SIZE,
-					    GFP_KERNEL, &ex111->data_dma);
+	ex111->data = usb_alloc_coherent(udev, REPT_SIZE, GFP_KERNEL, &ex111->data_dma);
 #else
 	ex111->data = usb_buffer_alloc(udev, REPT_SIZE, GFP_KERNEL, &ex111->data_dma);
 #endif
@@ -397,7 +396,11 @@ static int ex111_probe(struct usb_interface *intf,
 out_do_exit:
 	usb_free_urb(ex111->irq);
 out_free_buffers:
-	usb_free_coherent(udev, REPT_SIZE, ex111->data, ex111->data_dma);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)
+	usb_free_coherent(interface_to_usbdev(intf), REPT_SIZE, ex111->data, ex111->data_dma);
+#else
+	usb_buffer_free(interface_to_usbdev(intf), REPT_SIZE, ex111->data, ex111->data_dma);
+#endif
 	kfree(ex111->buffer);
 out_free:
 	input_free_device(input_dev);
