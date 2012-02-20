@@ -21,6 +21,7 @@
  * This driver is based on usbtouchscreen.c by Daniel Ritz and Todd E. Johnson
  *****************************************************************************/
 
+#include <linux/version.h>
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/module.h>
