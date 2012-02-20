@@ -315,8 +315,13 @@ static int ex111_probe(struct usb_interface *intf,
 	if (!ex111 || !input_dev)
 		goto out_free;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)
 	ex111->data = usb_alloc_coherent(udev, REPT_SIZE,
 					    GFP_KERNEL, &ex111->data_dma);
+#else
+	ex111->data = usb_buffer_alloc(udev, REPT_SIZE, GFP_KERNEL, &ex111->data_dma);
+#endif
+
 	if (!ex111->data)
 		goto out_free;
 
@@ -413,7 +418,11 @@ static void ex111_disconnect(struct usb_interface *intf)
 	/* this will stop IO via close */
 	input_unregister_device(ex111->input);
 	usb_free_urb(ex111->irq);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)
 	usb_free_coherent(interface_to_usbdev(intf), REPT_SIZE, ex111->data, ex111->data_dma);
+#else
+	usb_buffer_free(interface_to_usbdev(intf), REPT_SIZE, ex111->data, ex111->data_dma);
+#endif
 	kfree(ex111->buffer);
 	kfree(ex111);
 }
@@ -423,10 +432,10 @@ static struct usb_driver ex111_driver =
 	.name		= "ex111touchscreen",
 	.probe		= ex111_probe,
 	.disconnect	= ex111_disconnect,
+	.id_table	= ex111_devices,
 	.suspend	= ex111_suspend,
 	.resume		= ex111_resume,
 	.reset_resume	= ex111_reset_resume,
-	.id_table	= ex111_devices,
 	.supports_autosuspend = 1,
 };
 
