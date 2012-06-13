@@ -57,6 +57,8 @@ struct ex111_usb {
 	char name[128];
 	char phys[64];
 	void *priv;
+	unsigned int intrpipe;
+	struct work_struct reset_pipe_work;
 
 	int x, y;
 	int touch, press;
@@ -136,6 +138,22 @@ bailout:
 	return 0;
 }
 
+static void reset_halted_pipe(struct work_struct *ws)
+{
+	struct ex111_usb *ex111 =
+			container_of(ws, struct ex111_usb, reset_pipe_work);
+	struct usb_device *udev = interface_to_usbdev(ex111->interface);
+
+	int rv = usb_clear_halt(udev, ex111->intrpipe);
+
+	if (rv != 0)
+		err("%s - usb_clear_halt failed with %d",__func__,rv);
+
+	rv = ex111_init(ex111);
+	if (rv != 0)
+		err("%s - ex111_init failed with %d",__func__,rv);
+}
+
 static void ex111_process_paket(struct ex111_usb *ex111, unsigned char *pkt)
 {
 	ex111->x = (pkt[4] << 8) | pkt[3];
@@ -169,14 +187,14 @@ static void ex111_irq(struct urb *urb)
 		dbg("%s - urb timed out - was the device unplugged?",
 		    __func__);
 		return;
+	case -EPIPE:
+		dbg("%s - urb stalled with status: %d, trying to resurrect",
+		    __func__, urb->status);
+		schedule_work(&ex111->reset_pipe_work);
+		return;
 	case -ECONNRESET:
 	case -ENOENT:
 	case -ESHUTDOWN:
-	case -EPIPE:
-		/* this urb is terminated, clean up */
-		dbg("%s - urb shutting down with status: %d",
-		    __func__, urb->status);
-		return;
 	default:
 		dbg("%s - nonzero urb status received: %d",
 		    __func__, urb->status);
@@ -368,8 +386,9 @@ static int ex111_probe(struct usb_interface *intf,
 	input_set_abs_params(input_dev, ABS_X, MIN_XC, MAX_XC, 0, 0);
 	input_set_abs_params(input_dev, ABS_Y, MIN_YC, MAX_YC, 0, 0);
 
+	ex111->intrpipe = usb_rcvintpipe(udev, endpoint->bEndpointAddress);
 	usb_fill_int_urb(ex111->irq, udev,
-			usb_rcvintpipe(udev, endpoint->bEndpointAddress),
+			ex111->intrpipe,
 			ex111->data, REPT_SIZE,
 			ex111_irq, ex111, endpoint->bInterval);
 
@@ -390,6 +409,8 @@ static int ex111_probe(struct usb_interface *intf,
 	}
 
 	usb_set_intfdata(intf, ex111);
+
+	INIT_WORK(&ex111->reset_pipe_work, reset_halted_pipe);
 
 	return 0;
 
