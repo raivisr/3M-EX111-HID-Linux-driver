@@ -191,7 +191,7 @@ static void ex111_irq(struct urb *urb)
 		dbg("%s - urb stalled with status: %d, trying to resurrect",
 		    __func__, urb->status);
 		schedule_work(&ex111->reset_pipe_work);
-		return;
+		goto exit;
 	case -ECONNRESET:
 	case -ENOENT:
 	case -ESHUTDOWN:
