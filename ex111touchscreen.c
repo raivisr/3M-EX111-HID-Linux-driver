@@ -152,6 +152,10 @@ static void reset_halted_pipe(struct work_struct *ws)
 	rv = ex111_init(ex111);
 	if (rv != 0)
 		err("%s - ex111_init failed with %d",__func__,rv);
+
+	rv = usb_submit_urb(ex111->irq, GFP_ATOMIC);
+	if (rv)
+		err("%s - usb_submit_urb failed with result: %d", __func__, rv);
 }
 
 static void ex111_process_paket(struct ex111_usb *ex111, unsigned char *pkt)
@@ -191,7 +195,7 @@ static void ex111_irq(struct urb *urb)
 		dbg("%s - urb stalled with status: %d, trying to resurrect",
 		    __func__, urb->status);
 		schedule_work(&ex111->reset_pipe_work);
-		goto exit;
+		return;
 	case -ECONNRESET:
 	case -ENOENT:
 	case -ESHUTDOWN:
